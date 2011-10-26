@@ -21,105 +21,118 @@
 
 This example code is in the public domain.
  	
- http://arduino.cc/en/Tutorial/ButtonStateChange
+ http://arduino.cc/en/Tutorial/ButtonLeftStateChange
  
  */
 
 // this constant won't change:
 const int buttonPin1 = 2;    // the pin that the pushbutton is attached to
 const int buttonPin2 = 3;    // the pin that the pushbutton is attached to
-const int ledPin = 9;       // the pin that the LED is attached to
-const int ledPin2 = 10;       // the pin that the LED is attached to
-const int maxVal = 255;
+const int ledLeft = 9;       // the pin that the LED is attached to
+const int ledRight = 10;     // the pin that the LED is attached to
+const int maxVal = 100;
+const int ms = 10;           // delay in milliseconds
 
 // Variables will change:
-int buttonPushCounter = 0;   // counter for the number of button presses
-int buttonPushCounter2 = 0;   // counter for the number of button presses
-int buttonState = 0;         // current state of the button
-int buttonState2 = 0;         // current state of the button
-int lastButtonState = 0;     // previous state of the button
-int lastButtonState2 = 0;     // previous state of the button
+int buttonTogglePushCounter = 0;   // counter for the number of button presses
+int buttonRightPushCounter = 0;   // counter for the number of button presses
+int buttonToggleState = 0;         // current state of the button
+int buttonRightState = 0;         // current state of the button
+int lastButtonToggleState = 0;     // previous state of the button
+int lastButtonRightState = 0;     // previous state of the button
 int value = 0;
+int tween = 0;
+int earLeftVal = 0;
+int earRightVal = 0;
 
 
 void setup() {
-  // initialize the button pin as a input:
+  // initialize buttons:
   pinMode(buttonPin1, INPUT);
   pinMode(buttonPin2, INPUT);
-  // initialize the LED as an output:
-  pinMode(ledPin, OUTPUT);
-  pinMode(ledPin2, OUTPUT);
-  // initialize serial communication:
+  // initialize LED output:
+  pinMode(ledLeft, OUTPUT);
+  pinMode(ledRight, OUTPUT);
   Serial.begin(9600);
 }
 
 
 void loop() {
   // read the pushbutton input pin:
-  buttonState = digitalRead(buttonPin1);
-  buttonState2 = digitalRead(buttonPin2);
+  buttonToggleState = digitalRead(buttonPin1);
+  buttonRightState = digitalRead(buttonPin2);
 
-  // compare the buttonState to its previous state
-  if (buttonState != lastButtonState) {
+
+
+  if (lastButtonRightState != buttonRightState) {
+    buttonToggleState = !buttonToggleState;
+    if (buttonTogglePushCounter % 2 != 0) buttonTogglePushCounter++;
+  }
+  lastButtonRightState = buttonRightState;
+
+  // compare the buttonLeftState to its previous state
+  if (buttonToggleState != lastButtonToggleState) {
     // if the state has changed, increment the counter
-    if (buttonState == HIGH) {
+    if (buttonToggleState == HIGH) {
       // if the current state is HIGH then the button
       // wend from off to on:
-      buttonPushCounter++;
-      Serial.println("on");
-      Serial.print("1) number of button pushes:  ");
-      Serial.println(buttonPushCounter, DEC);
+      buttonTogglePushCounter++;
+      Serial.println("Toggle ON");
+      Serial.print("1) Number of button pushes:  ");
+      Serial.println(buttonTogglePushCounter, DEC);
     } 
     else {
-      // if the current state is LOW then the button
-      // wend from on to off:
-      Serial.println("off"); 
+      Serial.println("Toggle OFF"); 
     }
-  } 
-  if (buttonState2 != lastButtonState2) {
-    // if the state has changed, increment the counter
-    if (buttonState2 == HIGH) {
-      // if the current state is HIGH then the button
-      // wend from off to on:
-      buttonPushCounter2++;
-      Serial.println("on");
-      Serial.print("2) number of button pushes:  ");
-      Serial.println(buttonPushCounter2, DEC);
-    } 
   }
+
   // save the current state as the last state, 
   //for next time through the loop
-  lastButtonState = buttonState;
-  lastButtonState2 = buttonState2;
+  lastButtonToggleState = buttonToggleState;
 
-
-  // turns on the LED every four button pushes by 
-  // checking the modulo of the button push counter.
-  // the modulo function gives you the remainder of 
-  // the division of two numbers:
-  if (buttonPushCounter % 2 == 0 || buttonPushCounter2 % 2 == 1 ) {
-    //digitalWrite(ledPin, HIGH);
-    value++;
-    value = constrain(value, 0, maxVal);
-    analogWrite(ledPin, value);
-    analogWrite(ledPin2, maxVal-value);
-    delay(5);
+  if (buttonTogglePushCounter % 2 == 0 || buttonRightState == LOW) {
+    if (value < maxVal) {
+      value++;
+    }
   } else {
-    //digitalWrite(ledPin, LOW);
-    value--;
-    value = constrain(value, 0, maxVal);
-    analogWrite(ledPin, value);
-    analogWrite(ledPin2, maxVal-value);
-    delay(5);
+    if (value > 0) {
+      value--;
+    }
   }
-  
+  if (value!=0 && value!=maxVal) {
+    tween = easeInOutQuad((ms*value), 0, maxVal, (ms*maxVal));
+    Serial.print("Value:  "); 
+    Serial.print(value, DEC);
+    Serial.print(", Tween:  "); 
+    Serial.println(tween, DEC);
+    sync(tween, value);
+  }
+  delay(ms);
 }
 
+void sync(int leftVal, int rightVal) {
+  leftVal = constrain(leftVal, 0, maxVal);
+  analogWrite(ledLeft, leftVal);
+  rightVal = constrain(rightVal, 0, maxVal);
+  analogWrite(ledRight, rightVal);
+}
 
+// t: current time, b: beginning value, c: change in value, d: duration
+// t and d can be in frames or seconds/milliseconds
 
+// quadratic easing in/out - acceleration until halfway, then deceleration
+float easeInOutQuad (float t, float b, float c, float d) {
+  if ((t/=d/2) < 1) return c/2*t*t + b;
+  return -c/2 * ((--t)*(t-2) - 1) + b;
+}
 
-
-
+// exponential easing in/out - accelerating until halfway, then decelerating
+float easeInOutExpo (float t, float b, float c, float d) {
+  if (t==0) return b;
+  if (t==d) return b+c;
+  if ((t/=d/2) < 1) return c/2 * pow(2, 10 * (t - 1)) + b;
+  return c/2 * (-pow(2, -10 * --t) + 2) + b;
+}
 
 
 
