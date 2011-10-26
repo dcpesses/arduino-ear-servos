@@ -3,7 +3,7 @@
  	
  Often, you don't need to know the state of a digital input all the time,
  but you just need to know when the input changes from one state to another.
- For example, you want to know when a button goes from OFF to ON.  This is called
+ For example, you want to know when a button goes from OFF to ON.  This is calservo
  state change detection, or edge detection.
  
  This example shows how to detect when a button or button changes from off to on
@@ -28,9 +28,11 @@ This example code is in the public domain.
 // this constant won't change:
 const int buttonPin1 = 2;    // the pin that the pushbutton is attached to
 const int buttonPin2 = 3;    // the pin that the pushbutton is attached to
-const int ledLeft = 9;       // the pin that the LED is attached to
-const int ledRight = 10;     // the pin that the LED is attached to
-const int maxVal = 100;
+int servoLeft = 9;
+int servoRight = 10;
+
+const int maxVal = 140;
+const int minVal = 0;
 const int ms = 10;           // delay in milliseconds
 
 // Variables will change:
@@ -51,8 +53,8 @@ void setup() {
   pinMode(buttonPin1, INPUT);
   pinMode(buttonPin2, INPUT);
   // initialize LED output:
-  pinMode(ledLeft, OUTPUT);
-  pinMode(ledRight, OUTPUT);
+  pinMode(servoLeft, OUTPUT);
+  pinMode(servoRight, OUTPUT);
   Serial.begin(9600);
 }
 
@@ -100,7 +102,7 @@ void loop() {
     }
   }
   if (value!=0 && value!=maxVal) {
-    tween = easeInOutQuad((ms*value), 0, maxVal, (ms*maxVal));
+    tween = easeInOutQuad((ms*value), minVal, maxVal, (ms*minVal)+(ms*maxVal));
     Serial.print("Value:  "); 
     Serial.print(value, DEC);
     Serial.print(", Tween:  "); 
@@ -112,9 +114,9 @@ void loop() {
 
 void sync(int leftVal, int rightVal) {
   leftVal = constrain(leftVal, 0, maxVal);
-  analogWrite(ledLeft, leftVal);
+  analogWrite(servoLeft, leftVal);
   rightVal = constrain(rightVal, 0, maxVal);
-  analogWrite(ledRight, rightVal);
+  analogWrite(servoRight, rightVal);
 }
 
 // t: current time, b: beginning value, c: change in value, d: duration
