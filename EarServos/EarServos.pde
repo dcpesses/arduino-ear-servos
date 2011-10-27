@@ -4,88 +4,49 @@
 
 
 #include <Servo.h> 
+#include <Easing.h> 
  
-Servo myservo1;  // create servo object to control a servo 
-Servo myservo2;
+Servo myservo;  // create servo object to control a servo 
+                // a maximum of eight servo objects can be created 
 
 const int buttonPin1 = 2;    // the pin that the pushbutton is attached to
-const int buttonPin2 = 3;
 
-const int maxVal = 180;
-const int minVal = 0;
-const int ms = 5;           // delay in milliseconds
+int pos = 0;    // variable to store the servo position 
+int buttonPushCounter = 0;
+int buttonState = 0;
+int lastButtonState = 0;
 
-int buttonTogglePushCounter = 0;   // counter for the number of button presses
-int buttonRightPushCounter = 0;   // counter for the number of button presses
-int buttonToggleState = 0;         // current state of the button
-int buttonRightState = 0;         // current state of the button
-int lastButtonToggleState = 0;     // previous state of the button
-int lastButtonRightState = 0;     // previous state of the button
-
-int pos1 = 0;    // variable to store the servo position
-int pos2 = 0;
-int value = 0;
+const int maxVal = 60;
+const int minVal = 2;
+const int mult = 3;
 int tween = 0;
-int earLeftVal = 0;
-int earRightVal = 0;
 
-void setup() {
-  // initialize buttons:
+void setup() { 
   pinMode(buttonPin1, INPUT);
-  pinMode(buttonPin2, INPUT);
-  // initialize servos 
-  myservo1.attach(9);
-  myservo2.attach(10);
-  // init debug
-  Serial.begin(9600);
+  myservo.attach(9);  // attaches the servo on pin 9 to the servo object 
 } 
  
  
 void loop() { 
+  buttonState = digitalRead(buttonPin1);
   
-  // read the pushbutton input pins:
-  buttonToggleState = digitalRead(buttonPin1);
-  buttonRightState = digitalRead(buttonPin2);
-  
-  
-    // compare the buttonLeftState to its previous state
-  if (buttonToggleState != lastButtonToggleState) {
-    // if the state has changed, increment the counter
-    if (buttonToggleState == HIGH) {
-      // if the current state is HIGH then the button
-      buttonTogglePushCounter++;
-      Serial.println("Toggle ON");
-      Serial.print("1) Number of button pushes:  ");
-      Serial.println(buttonTogglePushCounter, DEC);
+    // compare the buttonState to its previous state
+  if (buttonState != lastButtonState && buttonState == HIGH) {
+    buttonPushCounter++;
+    if (buttonPushCounter % 2 == 0) {
+      for(pos = minVal; pos <= maxVal; pos += 1){  // goes from 0 degrees to 180 degrees
+        tween = floor(Easing::easeOutQuad((pos), minVal, maxVal, (minVal)+(maxVal)));
+        myservo.write(constrain(tween*mult, 10, 170));              // tell servo to go to position in variable 'pos' 
+        delay(12);                       // waits 15ms for the servo to reach the position 
+      } 
     } else {
-      Serial.println("Toggle OFF"); 
+      for(pos = 170; pos>=10; pos-=1){     // goes from 180 degrees to 0 degrees                        
+        tween = floor(Easing::easeInOutQuad((pos), 10, 170, (10)+(170)));
+        myservo.write(constrain(tween, 10, 170));              // tell servo to go to position in variable 'pos' 
+        //myservo.write(pos*mult);              // tell servo to go to position in variable 'pos' 
+        delay(18);                       // waits 15ms for the servo to reach the position 
+      } 
     }
   }
-  
-  if (buttonTogglePushCounter % 2 == 0 && buttonToggleState != lastButtonToggleState) {
-    earsUp();
-  } else {
-    earsDown();
-  }
-  lastButtonToggleState = buttonToggleState;
-}
-
-void earsUp () {
-  int pos1 = 0;
-  Serial.println("earsUp");
-  for(pos1 = 0; pos1 < 180; pos1++) {    // goes from 0 degrees to 180 degrees 
-    myservo1.write(pos1);              // tell servo to go to position in variable 'pos' 
-    myservo2.write(pos1);              // tell servo to go to position in variable 'pos' 
-    delay(ms);                       // waits 15ms for the servo to reach the position 
-  }
-}
-
-void earsDown () {
-  int pos2 = 0;
-  Serial.println("earsDown"); 
-  for(pos2 = 180; pos2>=1; pos2--) {     // goes from 180 degrees to 0 degrees                             
-    myservo1.write(pos2);              // tell servo to go to position in variable 'pos' 
-    myservo2.write(pos2);              // tell servo to go to position in variable 'pos' 
-    delay(ms);                       // waits 15ms for the servo to reach the position 
-  } 
+  lastButtonState = buttonState;
 }
