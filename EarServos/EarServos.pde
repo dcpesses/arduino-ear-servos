@@ -34,13 +34,20 @@ int tween = 0;
 int tweenLeft = 0;
 int tweenRight = 0;
 
-boolean idle = true;
+boolean idleLeft = true;
+boolean idleRight = true;
+
+boolean upLeft = false;
+boolean upRight = false;
+
 
 void setup() { 
   pinMode(buttonPin2, INPUT);
-  digitalWrite(buttonPin2,HIGH);
+  digitalWrite(buttonPin2, HIGH);
   pinMode(buttonPin3, INPUT);
+  digitalWrite(buttonPin3, HIGH);
   pinMode(buttonPin4, INPUT);
+  digitalWrite(buttonPin4, HIGH);
   servoLeft.attach(9);
   servoRight.attach(10);
 } 
@@ -54,7 +61,7 @@ void loop() {
   // compare the buttonState to its previous state
   if (buttonState != lastButtonState && buttonState == HIGH) {
     buttonPushCounter++;
-    idle = false;
+    idleLeft = false;
     if (buttonPushCounter % 2 == 0) {
       // both ears up quick
       for(pos = minVal; pos <= maxVal; pos += 1){ 
@@ -63,11 +70,15 @@ void loop() {
 	servoRightPos = constrain(tween*mult, 10, 170);
         servoLeft.write(servoLeftPos);
         servoRight.write(servoRightPos);
-       // if (pos == maxVal) idle = true;
+        //allow overrides when complete
+        upLeft = (servoLeftPos >= 165);
+        upRight = (servoRightPos >= 165);
         delay(12);
       } 
     } else {
       // both ears down quick
+      upLeft = false;
+      upRight = false;
       for (pos = 170; pos>=10; pos-=1){
         tween = floor(Easing::easeInOutQuad((pos), 10, 170, (10)+(170)));
 	servoLeftPos = constrain(tween, 15, 170);
@@ -75,38 +86,56 @@ void loop() {
         servoLeft.write(servoLeftPos);
         servoRight.write(servoRightPos);
         //servoLeft.write(pos*mult);
-        if (pos == 10) idle = true;
+        if (pos == 10) {
+          idleLeft = true;
+          idleRight = true;
+        }
         delay(18);
       } 
     }
-  } else if (idle == true) {
-    // left ear control
-    if (tweenLeft < maxVal*mult && buttonStateLeft == LOW) {
+  } else {
+    if (idleLeft == true) {
+      // left ear control
+      if (tweenLeft < maxVal*mult && buttonStateLeft == LOW) {
+        //raise left ear
         tweenLeft++;
         tweenLeft++;
-	servoLeftPos = constrain(tweenLeft, 18, 170);
+        servoLeftPos = constrain(tweenLeft, 18, 170);
         servoLeft.write(servoLeftPos);
         delay(9);
-    } else if (tweenLeft > minVal*mult && buttonStateLeft == HIGH) {
+      } else if (tweenLeft > minVal*mult && buttonStateLeft == HIGH) {
+        //lower left ear
         tweenLeft--;
         tweenLeft--;
-	servoLeftPos = constrain(tweenLeft, 18, 170);
+        servoLeftPos = constrain(tweenLeft, 18, 170);
         servoLeft.write(servoLeftPos);
         delay(9);
+      }
     }
-    // right ear control
-    if (tweenRight < maxVal*mult && buttonStateRight == LOW) {
+    if (idleRight == true) {
+      // right ear control
+      if (tweenRight < maxVal*mult && buttonStateRight == LOW) {
         tweenRight++;
         tweenRight++;
-	servoRightPos = constrain(tweenRight, 18, 170);
+        servoRightPos = constrain(tweenRight, 18, 170);
         servoRight.write(servoRightPos);
         delay(9);
-    } else if (tweenRight > minVal*mult && buttonStateRight == HIGH) {
+      } else if (tweenRight > minVal*mult && buttonStateRight == HIGH) {
         tweenRight--;
         tweenRight--;
-	servoRightPos = constrain(tweenRight, 18, 170);
+        servoRightPos = constrain(tweenRight, 18, 170);
         servoRight.write(servoRightPos);
         delay(9);
+      }
+    }
+    //override sync toggle for left & right
+    if (upLeft == true && buttonStateLeft == HIGH) {
+      upLeft = false;
+      idleLeft = true;
+    }
+    if (upRight == true && buttonStateRight == HIGH) {
+      upRight = false;
+      idleRight = true;
     }
   }
   lastButtonState = buttonState;
