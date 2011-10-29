@@ -38,6 +38,7 @@ boolean idle = true;
 
 void setup() { 
   pinMode(buttonPin2, INPUT);
+  digitalWrite(buttonPin2,HIGH);
   pinMode(buttonPin3, INPUT);
   pinMode(buttonPin4, INPUT);
   servoLeft.attach(9);
