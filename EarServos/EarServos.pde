@@ -416,6 +416,7 @@ int servoRightPos = 0;
 const int maxVal = 60;
 const int minVal = 6;
 const int mult = 3;
+const int restThreshold = 20;  // detach when at/near rest (no hold needed)
 
 int tween = 0;
 int tweenLeft = 0;
@@ -427,6 +428,39 @@ boolean idleRight = true;
 boolean upLeft = false;
 boolean upRight = false;
 
+boolean leftAttached = false;
+boolean rightAttached = false;
+
+void ensureLeftAttached() {
+  if (!leftAttached) {
+    servoLeft.attach(servoLeftPin);
+    leftAttached = true;
+    servoLeft.write(servoLeftPos > 0 ? servoLeftPos : 18);
+  }
+}
+
+void ensureRightAttached() {
+  if (!rightAttached) {
+    servoRight.attach(servoRightPin);
+    rightAttached = true;
+    servoRight.write(servoRightPos > 0 ? servoRightPos : 18);
+  }
+}
+
+void releaseLeftIfResting() {
+  if (leftAttached && servoLeftPos <= restThreshold) {
+    servoLeft.detach();
+    leftAttached = false;
+  }
+}
+
+void releaseRightIfResting() {
+  if (rightAttached && servoRightPos <= restThreshold) {
+    servoRight.detach();
+    rightAttached = false;
+  }
+}
+
 
 void setup() { 
   pinMode(buttonPin2, INPUT);
@@ -435,8 +469,7 @@ void setup() {
   digitalWrite(buttonPin3, HIGH);
   pinMode(buttonPin4, INPUT);
   digitalWrite(buttonPin4, HIGH);
-  servoLeft.attach(servoLeftPin);
-  servoRight.attach(servoRightPin);
+  // Leave servos detached at boot — no hold needed at rest
 } 
  
  
@@ -451,6 +484,8 @@ void loop() {
     idleLeft = false;
     if (buttonPushCounter % 2 == 0) {
       // both ears up quick
+      ensureLeftAttached();
+      ensureRightAttached();
       for(pos = minVal; pos <= maxVal; pos += 1){ 
         tween = floor(Easing::easeOutQuad((pos), minVal, maxVal, (minVal)+(maxVal)));
         servoLeftPos = constrain(tween*mult, 10, 170);
@@ -466,6 +501,8 @@ void loop() {
       // both ears down quick
       upLeft = false;
       upRight = false;
+      ensureLeftAttached();
+      ensureRightAttached();
       for (pos = 170; pos>=10; pos-=1){
         tween = floor(Easing::easeInOutQuad((pos), 10, 170, (10)+(170)));
         servoLeftPos = constrain(tween, 15, 170);
@@ -478,13 +515,16 @@ void loop() {
           idleRight = true;
         }
         delay(18);
-      } 
+      }
+      releaseLeftIfResting();
+      releaseRightIfResting();
     }
   } else {
     if (idleLeft == true) {
       // left ear control
       if (tweenLeft < maxVal*mult && buttonStateLeft == LOW) {
         //raise left ear
+        ensureLeftAttached();
         tweenLeft++;
         tweenLeft++;
         servoLeftPos = constrain(tweenLeft, 18, 170);
@@ -492,27 +532,32 @@ void loop() {
         delay(9);
       } else if (tweenLeft > minVal*mult && buttonStateLeft == HIGH) {
         //lower left ear
+        ensureLeftAttached();
         tweenLeft--;
         tweenLeft--;
         servoLeftPos = constrain(tweenLeft, 18, 170);
         servoLeft.write(servoLeftPos);
         delay(9);
+        releaseLeftIfResting();
       }
     }
     if (idleRight == true) {
       // right ear control
       if (tweenRight < maxVal*mult && buttonStateRight == LOW) {
+        ensureRightAttached();
         tweenRight++;
         tweenRight++;
         servoRightPos = constrain(tweenRight, 18, 170);
         servoRight.write(servoRightPos);
         delay(9);
       } else if (tweenRight > minVal*mult && buttonStateRight == HIGH) {
+        ensureRightAttached();
         tweenRight--;
         tweenRight--;
         servoRightPos = constrain(tweenRight, 18, 170);
         servoRight.write(servoRightPos);
         delay(9);
+        releaseRightIfResting();
       }
     }
     //override sync toggle for left & right
