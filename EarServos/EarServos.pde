@@ -5,6 +5,9 @@
 Servo servoLeft;
 Servo servoRight;
 
+const int servoLeftPin = 9;
+const int servoRightPin = 10;
+
 const int buttonPin2 = 2;
 const int buttonPin3 = 3;
 const int buttonPin4 = 4;
@@ -48,8 +51,8 @@ void setup() {
   digitalWrite(buttonPin3, HIGH);
   pinMode(buttonPin4, INPUT);
   digitalWrite(buttonPin4, HIGH);
-  servoLeft.attach(9);
-  servoRight.attach(10);
+  servoLeft.attach(servoLeftPin);
+  servoRight.attach(servoRightPin);
 } 
  
  
