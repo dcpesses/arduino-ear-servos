@@ -431,20 +431,29 @@ boolean upRight = false;
 boolean leftAttached = false;
 boolean rightAttached = false;
 
-void ensureLeftAttached() {
+// Only write when the commanded angle changes (skip redundant PWM updates)
+void writeLeft(int angle) {
+  if (leftAttached && angle == servoLeftPos) {
+    return;
+  }
   if (!leftAttached) {
     servoLeft.attach(servoLeftPin);
     leftAttached = true;
-    servoLeft.write(servoLeftPos > 0 ? servoLeftPos : 18);
   }
+  servoLeftPos = angle;
+  servoLeft.write(servoLeftPos);
 }
 
-void ensureRightAttached() {
+void writeRight(int angle) {
+  if (rightAttached && angle == servoRightPos) {
+    return;
+  }
   if (!rightAttached) {
     servoRight.attach(servoRightPin);
     rightAttached = true;
-    servoRight.write(servoRightPos > 0 ? servoRightPos : 18);
   }
+  servoRightPos = angle;
+  servoRight.write(servoRightPos);
 }
 
 void releaseLeftIfResting() {
@@ -484,14 +493,10 @@ void loop() {
     idleLeft = false;
     if (buttonPushCounter % 2 == 0) {
       // both ears up quick
-      ensureLeftAttached();
-      ensureRightAttached();
       for(pos = minVal; pos <= maxVal; pos += 1){ 
         tween = floor(Easing::easeOutQuad((pos), minVal, maxVal, (minVal)+(maxVal)));
-        servoLeftPos = constrain(tween*mult, 10, 170);
-        servoRightPos = constrain(tween*mult, 10, 170);
-        servoLeft.write(servoLeftPos);
-        servoRight.write(servoRightPos);
+        writeLeft(constrain(tween*mult, 10, 170));
+        writeRight(constrain(tween*mult, 10, 170));
         //allow overrides when complete
         upLeft = (servoLeftPos >= 165);
         upRight = (servoRightPos >= 165);
@@ -501,14 +506,10 @@ void loop() {
       // both ears down quick
       upLeft = false;
       upRight = false;
-      ensureLeftAttached();
-      ensureRightAttached();
       for (pos = 170; pos>=10; pos-=1){
         tween = floor(Easing::easeInOutQuad((pos), 10, 170, (10)+(170)));
-        servoLeftPos = constrain(tween, 15, 170);
-        servoRightPos = constrain(tween, 18, 170);
-        servoLeft.write(servoLeftPos);
-        servoRight.write(servoRightPos);
+        writeLeft(constrain(tween, 15, 170));
+        writeRight(constrain(tween, 18, 170));
         //servoLeft.write(pos*mult);
         if (pos == 10) {
           idleLeft = true;
@@ -524,39 +525,37 @@ void loop() {
       // left ear control
       if (tweenLeft < maxVal*mult && buttonStateLeft == LOW) {
         //raise left ear
-        ensureLeftAttached();
         tweenLeft++;
         tweenLeft++;
-        servoLeftPos = constrain(tweenLeft, 18, 170);
-        servoLeft.write(servoLeftPos);
+        writeLeft(constrain(tweenLeft, 18, 170));
         delay(9);
       } else if (tweenLeft > minVal*mult && buttonStateLeft == HIGH) {
         //lower left ear
-        ensureLeftAttached();
         tweenLeft--;
         tweenLeft--;
-        servoLeftPos = constrain(tweenLeft, 18, 170);
-        servoLeft.write(servoLeftPos);
+        writeLeft(constrain(tweenLeft, 18, 170));
         delay(9);
+        releaseLeftIfResting();
+      } else {
+        // not moving — drop hold if already at rest
         releaseLeftIfResting();
       }
     }
     if (idleRight == true) {
       // right ear control
       if (tweenRight < maxVal*mult && buttonStateRight == LOW) {
-        ensureRightAttached();
         tweenRight++;
         tweenRight++;
-        servoRightPos = constrain(tweenRight, 18, 170);
-        servoRight.write(servoRightPos);
+        writeRight(constrain(tweenRight, 18, 170));
         delay(9);
       } else if (tweenRight > minVal*mult && buttonStateRight == HIGH) {
-        ensureRightAttached();
         tweenRight--;
         tweenRight--;
-        servoRightPos = constrain(tweenRight, 18, 170);
-        servoRight.write(servoRightPos);
+        writeRight(constrain(tweenRight, 18, 170));
         delay(9);
+        releaseRightIfResting();
+      } else {
+        // not moving — drop hold if already at rest
         releaseRightIfResting();
       }
     }
